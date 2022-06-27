@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import {
+  Button,
   Form, Icon, StatefulButton, Toast, useToggle,
 } from '@edx/paragon';
 import {
@@ -19,11 +20,9 @@ import messages from './messages';
 import { BulkEmailContext } from '../bulk-email-context';
 import {
   addRecipient,
-  clearDateTime,
   clearEditor,
   handleEditorChange,
   removeRecipient,
-  setEditMode,
 } from './data/actions';
 import { editScheduledEmailThunk, postBulkEmailThunk } from './data/thunks';
 import { getScheduledBulkEmailThunk } from '../bulk-email-task-manager/bulk-email-scheduled-emails-table/data/thunks';
@@ -160,19 +159,15 @@ function BulkEmailForm(props) {
   };
 
   useEffect(() => {
-    if (!!editor.scheduleDate || !!editor.scheduleTime) {
+    if (editor.editMode === true) {
       toggleScheduled(true);
-    }
-    if (isScheduled) {
-      if (editor.editMode) {
-        setEmailFormStatus(FORM_SUBMIT_STATES.RESCHEDULE);
-      } else {
-        setEmailFormStatus(FORM_SUBMIT_STATES.SCHEDULE);
-      }
+      setEmailFormStatus(FORM_SUBMIT_STATES.RESCHEDULE);
+    } else if (isScheduled) {
+      setEmailFormStatus(FORM_SUBMIT_STATES.SCHEDULE);
     } else {
       setEmailFormStatus(FORM_SUBMIT_STATES.DEFAULT);
     }
-  }, [isScheduled, editor.scheduleDate, editor.scheduleTime]);
+  }, [isScheduled, editor.editMode]);
 
   const AlertMessage = () => (
     <>
@@ -266,13 +261,7 @@ function BulkEmailForm(props) {
               <Form.Checkbox
                 name="scheduleEmailBox"
                 checked={isScheduled}
-                onChange={() => toggleScheduled((prev) => {
-                  if (prev) {
-                    dispatch(clearDateTime());
-                    dispatch(setEditMode(false));
-                  }
-                  return !prev;
-                })}
+                onChange={() => toggleScheduled((prev) => !prev)}
                 disabled={emailFormStatus === FORM_SUBMIT_STATES.PENDING}
               >
                 {intl.formatMessage(messages.bulkEmailFormScheduleBox)}
@@ -289,10 +278,11 @@ function BulkEmailForm(props) {
           <div
             className={classNames('d-flex', {
               'mt-n4.5': !isScheduled && !isMobile,
-              'flex-row-reverse justify-content-between align-items-end': !isMobile,
+              'flex-row-reverse align-items-end': !isMobile,
               'border-top pt-2': isScheduled,
             })}
           >
+            {editor.editMode && <Button className="ml-2" variant="outline-brand" onClick={() => dispatch(clearEditor())}>Cancel</Button>}
             <StatefulButton
               variant="primary"
               onClick={(event) => {
